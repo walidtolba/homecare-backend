@@ -1,5 +1,16 @@
 from django.db import models
-from django.contrib.auth.models import User
+from django.contrib.auth.models import AbstractUser
+from . import managers
+
+class User(AbstractUser):
+    email = models.EmailField(unique=True, max_length=254, verbose_name='email address')
+    password = models.CharField(max_length=128, verbose_name='password')
+    username = None
+
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = []
+    
+    objects = managers.UserManager()
 
 class Profile(models.Model):
     genders = (('F', 'Female'), ('M', 'Male'))

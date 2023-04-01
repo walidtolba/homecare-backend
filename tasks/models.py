@@ -1,5 +1,5 @@
 from django.db import models
-from django.contrib.auth.models import User
+from users.models import User
 
 class Demand(models.Model):
     types = (('M', 'Medic'), ('N', 'Nurse'), ('D', 'Driver'))
@@ -14,7 +14,7 @@ class Demand(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
 
     def __str__(self):
-        return f'demand number {self.id}'
+        return f'demand id {self.id} by {self.user.email}'
 
 class Task(models.Model):
     states = (('A', 'Active'), ('F', 'Finished'), ('C', 'Canceled'))
@@ -27,12 +27,19 @@ class Task(models.Model):
     workerRapport = models.TextField(blank=True, null=True)
     isReported = models.BooleanField(default=False)
     demand = models.ForeignKey(Demand, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
 
     def __str__(self):
-        return f'task number {self.id} for the {str()}'
+        return f'task id {self.id} for demand id {self.demand.id} by {self.user.email}'
     
 class Absance(models.Model):
-  firstDate = models.DateTimeField()
-  lastDate = models.DateTimeField(blank=True, null=True)
-  canUrgence = models.BooleanField(default=True)
-  worker = models.OneToOneField(User, on_delete=models.CASCADE)
+    states = (('A', 'Active'), ('C', 'Canceld'))
+
+    firstDate = models.DateTimeField()
+    lastDate = models.DateTimeField(blank=True, null=True)
+    canUrgence = models.BooleanField(default=True)
+    state = models.CharField(max_length=1, choices=states, default='A')
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return f'absance id {self.id} for {self.user.email}'
