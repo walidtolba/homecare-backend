@@ -7,11 +7,15 @@ from django.conf import settings
 from rest_framework import parsers, renderers, status
 from .serializers import AuthTokenSerializer
 
-from .serializers import UserSerializer
+from .serializers import UserSerializer, UserCreationSerializer, VerificationCodeSerializer, ProfileSerializer
 
 import jwt, datetime
 
-from .models import User
+from .models import User, VerificationCode
+
+import random
+
+from django.core.mail import send_mail
 
 class LoginView(APIView): # Not used 
     def post(self, request):
@@ -37,7 +41,7 @@ class LoginView(APIView): # Not used
         if not token:
             raise AuthenticationFailed('Unauthenticated')
         try:
-            payload = jwt.decode(token, 'manel-helal', algorithms='HS256')
+            payload = jwt.decode(token, settings.SECRET_KEY, algorithms='HS256')
         except jwt.ExpiredSignatureError:
             raise AuthenticationFailed('Unauthenticated')
         
@@ -64,3 +68,47 @@ class JSONWebTokenAuth(APIView):
             }, settings.SECRET_KEY, algorithm='HS256')
             return Response({'token': token})
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+class SignupView(APIView): 
+    def post(self, request):
+        serializer = UserCreationSerializer(data=request.data)
+        if serializer.is_valid(raise_exception=True):
+            instance = serializer.save()
+        code = ''.join([str(random.choice(range(10))) for i in range(5)])
+        verificationCode = VerificationCode(code=code, user=instance)
+        verificationCode.save()
+        data = serializer.validated_data
+        subject = 'welcome to HomeCare'
+        message = f'Hi {data["first_name"]} {data["last_name"]} , thank you for registering in HomeCare, your verification code is: {code}'
+        email_from = settings.EMAIL_HOST_USER
+        recipient_list = (data['email'],)
+        send_mail( subject, message, email_from, recipient_list )
+        return Response({'email': data['email']})
+
+class SignupVerificationView(APIView): # Not complete
+    def post(self, request):
+        code = request.data['code'] 
+        user = User.objects.filter(email=request.data['email']).first()
+        user_code = VerificationCode.objects.filter(user=user.id).first()   
+        if code == user_code.code:
+            user_code.delete()
+            user.is_active = True
+            user.save()
+            return Response({'email': user.email})
+        return Response({'error': 'Can\'t verify user'})
+    
+class ProfileView(APIView):
+    def post(self, request):
+        #debanage:
+        data = request.data.copy()
+        email = data.pop('email')
+        if (email):
+            data['user'] = User.objects.filter(email=email).first().id
+
+        # end
+        serializer = ProfileSerializer(data=data)
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+        data = serializer.validated_data.copy()
+        data['user'] = data['user'].email
+        return Response(data)

@@ -18,10 +18,11 @@ class MyDemandView(APIView):
         return Response(serializer.data)
     
     def post(self, request):
-        data = request.data
+        data = dict(request.data)
+        print(data)
         data['user'] = request.user.id
         serializer = DemandSerializer(data=data)
-        if serializer.is_valid():
+        if serializer.is_valid(raise_exception=True):
             instance = serializer.save()
         return Response(DemandSerializer(instance).data)
     

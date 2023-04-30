@@ -6,8 +6,12 @@ class Demand(models.Model):
     states = (('A', 'Active'), ('T', 'Tasked'), ('F', 'Finished'), ('C', 'Canceld'))
 
     type = models.CharField(max_length=1, choices= types)
-    address = models.CharField(max_length=255)
     description = models.TextField(blank=True)
+    willaia = models.CharField(max_length=64)
+    daira = models.CharField(max_length=64)
+    baladia = models.CharField(max_length=64)
+    street = models.CharField(max_length=64)
+    home = models.CharField(max_length=64)
     state = models.CharField(max_length=1, choices=states, default='A')
     isUrgent = models.BooleanField(default=False)
     demandDate = models.DateTimeField(auto_now_add=True)
@@ -23,9 +27,7 @@ class Task(models.Model):
     state = models.CharField(max_length=1, choices=states, default='A')
     creationDate = models.DateTimeField(auto_now_add=True)
     finishedDate = models.DateTimeField(blank=True, null=True)
-    userRapport = models.TextField(blank=True, null=True)
     workerRapport = models.TextField(blank=True, null=True)
-    isReported = models.BooleanField(default=False)
     demand = models.ForeignKey(Demand, on_delete=models.CASCADE)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
 

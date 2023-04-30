@@ -1,3 +1,6 @@
 from django.urls import path
+from . import views
 
-urlpatterns = []
+urlpatterns = [
+    path('ask/', views.SupportMessageView.as_view()),
+]

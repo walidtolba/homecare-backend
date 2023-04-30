@@ -3,4 +3,8 @@ from . import views
 
 urlpatterns = [
     path('login/', views.JSONWebTokenAuth.as_view()),
+    path('signup/', views.SignupView.as_view()),
+    path('verify-signup/', views.SignupVerificationView.as_view()),
+    path('profile/', views.ProfileView.as_view()),
+
 ]

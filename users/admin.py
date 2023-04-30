@@ -1,7 +1,11 @@
 from django.contrib import admin
-from .models import User
+from .models import User, Profile, VerificationCode
 
 admin.site.register(User)
+admin.site.register(VerificationCode)
+admin.site.register(Profile)
+
+
 
 
 # from django import forms
