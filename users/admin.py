@@ -1,9 +1,10 @@
 from django.contrib import admin
-from .models import User, Profile, VerificationCode
+from .models import User, Profile, VerificationCode, UserVerificationRecord
 
 admin.site.register(User)
 admin.site.register(VerificationCode)
 admin.site.register(Profile)
+admin.site.register(UserVerificationRecord)
 
 
 

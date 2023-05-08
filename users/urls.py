@@ -6,5 +6,5 @@ urlpatterns = [
     path('signup/', views.SignupView.as_view()),
     path('verify-signup/', views.SignupVerificationView.as_view()),
     path('profile/', views.ProfileView.as_view()),
-
+    path('profile_picture/', views.ProfilePictureView.as_view()),
 ]

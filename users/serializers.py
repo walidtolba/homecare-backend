@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, VerificationCode, Profile
+from .models import User, VerificationCode, Profile, UserVerificationRecord
 
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth import authenticate
@@ -91,3 +91,29 @@ class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = Profile
         fields = '__all__'
+
+class ProfilePictureSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Profile
+        fields = ['picture']
+    
+    def upload(self, instance, validated_data):
+        instance.picture = validated_data.get('picture', instance.picture)
+        instance.save()
+        return instance
+    
+
+class UserVerificationRecordSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Profile
+        fields = ['picture']
+    
+    def create(self, validated_data):
+        instance = UserVerificationRecord()
+        instance.type = validated_data.get('type')
+        instance.user = validated_data.get('user')
+        if not validated_data.get('image'):
+            pass #raise error here
+        instance.image = validated_data.get('image')
+        instance.save()
+        return instance

@@ -1,0 +1,143 @@
+{% extends "panel/base.html" %}
+{% load i18n static jazzmin %}
+
+
+{% get_jazzmin_ui_tweaks as jazzmin_ui %}
+
+{% block bodyclass %}{{ block.super }} dashboard{% endblock %}
+
+{% block content_title %} {% trans 'Verification Record' %} {% endblock %}
+
+{% block breadcrumbs %}
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'admin:index' %}">{% trans 'Home' %}</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'verify_users' %}">{% trans 'Verify Users' %}</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'user_verification_record' record.user.id %}">{% trans 'User Verification Records' %}</a></li>
+        <li class="breadcrumb-item">{% trans 'Verification Record' %}</li>
+    </ol>
+{% endblock %}
+{% block content %}
+    {% get_side_menu using="app_list" as dashboard_list %}
+
+<div class="col-12">
+{% if record %}
+  <div class="content">
+   <div class="container-fluid">
+      <section id="content" class="content">
+         <div class="row">
+            <div id="content-main" class="col-12">
+               <form action="{% url 'verify_users_confirm' record.user.id %}" method="post" id="user_form" novalidate="">
+                  <input type="hidden" name="csrfmiddlewaretoken" value="8pxTuv4G6o8B8DOBscNfF2FWlFMxDcZNYwEHnK5Lr1ZnxVtO8BCtYeFEoSUgAzL8">
+                  <div class="row">
+                     <div class="col-12 col-lg-9">
+                        <div class="card">
+                           <div class="card-body">
+                              <div class="form-group field-last_login">
+                                 <div class="row">
+                                    <label class="col-sm-3 text-left" for="id_last_login">
+                                    User
+                                    </label>
+                                    <div class=" col-sm-7 
+                                       field-last_login
+                                       ">
+                                   <a href="/admin/users/user/{{ record.user.id }}">{{ record.user.email }}</a>
+                                    </div>
+                                 </div>
+                              </div>
+                              <div class="form-group field-is_superuser">
+                                 <div class="row">
+                                    <label class="col-sm-3 text-left" for="id_is_superuser">
+                                    Document type
+                                    </label>
+                                    <div class=" col-sm-7 
+                                       field-is_superuser
+                                       ">
+                                       <p>{{ record.type }}</p>
+                                    </div>
+                                 </div>
+                              </div>
+                              <div class="form-group field-is_support">
+                                 <div class="row">
+                                    <label class="col-sm-3 text-left" for="id_is_support">
+                                    Support status
+                                    </label>
+                                    <div class=" col-sm-7 
+                                       field-is_support
+                                       ">
+                                       <img src ="this" alt="No image for testing"/>
+                                    </div>
+                                 </div>
+                              </div>
+                           </div>
+                        </div>
+                     </div>
+                     <div class="col-12 col-lg-3">
+                        <div id="jazzy-actions" class="">
+                           <div>
+                              <div class="form-group">
+                                 <input type="submit" value="Verify" class="btn btn-success form-control" name="_save">
+                              </div>
+                              <div class="form-group">
+                                 <a href="{% url 'verify_users_delete' record.id %}" class="btn btn-danger form-control">Delete</a>
+                              </div>
+                           </div>
+                        </div>
+                     </div>
+                     <script type="text/javascript" id="django-admin-form-add-constants" src="/static/admin/js/change_form.js"></script>
+                     <script id="django-admin-prepopulated-fields-constants" src="/static/admin/js/prepopulate_init.js" data-prepopulated-fields="[]"></script>
+                  </div>
+               </form>
+            </div>
+         </div>
+      </section>
+   </div>
+</div>
+	                {% else %}
+	                           <section id="content" class="content">
+   <div class="row">
+      <div class="col-12 pb-4" id="change-list-filters">
+         <form id="changelist-search" class="form-inline" method="GET">
+         </form>
+      </div>
+      <div class="col-12">
+         <div>
+            <form id="changelist-form" method="post" novalidate="">
+               <input type="hidden" name="csrfmiddlewaretoken" value="2IprOhawyhZBFfEAdXpKj5wxqi7rdhXtSPwfHwbBTUQn4xjNTmeYChwftvfaaEJO">
+               <div id="content-main">
+                  <div class="module" id="changelist">
+                     <div class="row">
+                        <div class="col-12">
+                           <div class="change-list-actions row pb-3">
+                              <div class="col-12">
+                              </div>
+                           </div>
+                        </div>
+                     </div>
+                     <div class="row">
+                        <div class="col-5">
+                           <div class="dataTables_info" role="status" aria-live="polite">
+                              No Record
+                           </div>
+                        </div>
+                        <div class="col-7">
+                           <ul class="pagination pagination-sm m-0 float-right">
+                           </ul>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+            </form>
+         </div>
+         <br class="clear">
+      </div>
+   </div>
+</section>
+	                {% endif %}
+            </tbody>
+         </table>
+      </div>
+   </div>
+</div>
+{% endblock %}
+
+

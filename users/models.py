@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from . import managers
+import os
 
 class User(AbstractUser):
     email = models.EmailField(unique=True, max_length=254, verbose_name='email address')
@@ -18,6 +19,8 @@ class Profile(models.Model):
     bloodTypes = (('A+', 'A+'), ('B+', 'B+'), ('AB+', 'AB+'), ('O+', 'O+'), ('A-', 'A-'), ('B-', 'B-'), ('AB-', 'AB-'), ('O-', 'O-'))
     civilStatus = (('S', 'Single'), ('M', 'Married'), ('W', 'Widowed'), ('D', 'Divorced'))
     titles = [('M', 'Medic'), ('N', 'Nurse'), ('D', 'Driver'), ('F', 'Pharmasist'), ('P', 'Patient')]
+    def get_upload_to(self, filename):
+        return os.path.join('images', 'profile_pictures', str(self.pk), filename)
     title = models.CharField(max_length=1, choices=titles)
     birthDate = models.DateField()
     gender = models.CharField(max_length=1, choices=genders)
@@ -30,13 +33,14 @@ class Profile(models.Model):
     job = models.CharField(max_length=128, null=True, blank=True)
     isOnline = models.BooleanField(default=False)
     isVerified = models.BooleanField(default=False)
-    picture = models.ImageField(null=True, blank=True)
+    picture = models.ImageField(upload_to=get_upload_to, null=True, blank=True)
     civilStatus = models.CharField(max_length=1, choices=civilStatus)
     bio = models.TextField(blank=True, default='')
     isPublic = models.BooleanField(default=True)
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     def __str__(self):
         return self.user.email
+
 
 class VerificationCode(models.Model):
     code = models.CharField(max_length=6)
@@ -45,3 +49,10 @@ class VerificationCode(models.Model):
     
     def __str__(self):
         return self.user.email
+
+class UserVerificationRecord(models.Model):
+    def get_upload_to(self, filename):
+        return os.path.join('images', 'profile_verification', str(self.user.pk), filename)
+    type = models.CharField(max_length=64)
+    image = models.ImageField(upload_to=get_upload_to)
+    user = models.ForeignKey(on_delete=models.CASCADE, to=User)

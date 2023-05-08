@@ -1,13 +1,15 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.exceptions import AuthenticationFailed
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.parsers import FormParser, MultiPartParser
 
 from django.conf import settings
 
 from rest_framework import parsers, renderers, status
 from .serializers import AuthTokenSerializer
 
-from .serializers import UserSerializer, UserCreationSerializer, VerificationCodeSerializer, ProfileSerializer
+from .serializers import UserSerializer, UserCreationSerializer, VerificationCodeSerializer, ProfileSerializer, ProfilePictureSerializer, UserVerificationRecordSerializer
 
 import jwt, datetime
 
@@ -112,3 +114,28 @@ class ProfileView(APIView):
         data = serializer.validated_data.copy()
         data['user'] = data['user'].email
         return Response(data)
+
+class ProfilePictureView(APIView):
+    permission_classes = [IsAuthenticated]
+    parser_classes = [FormParser, MultiPartParser]
+    
+    def post(self, request):
+        profile = request.user.profile
+        serializer = ProfilePictureSerializer(instance=profile, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(data=serializer.data, status=200)
+        return Response(data=serializer.errors, status=500)
+    
+class UserVerificationRecord(APIView):
+    permission_classes = [IsAuthenticated]
+    parser_classes = [FormParser, MultiPartParser]
+    
+    def post(self, request):
+        data = request.data.copy()
+        data['user'] = request.user
+        serializer = UserVerificationRecordSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(data=serializer.data, status=200)
+        return Response(data=serializer.errors, status=500)

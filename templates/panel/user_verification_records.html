@@ -1,0 +1,98 @@
+{% extends "panel/base.html" %}
+{% load i18n static jazzmin %}
+
+
+{% get_jazzmin_ui_tweaks as jazzmin_ui %}
+
+{% block bodyclass %}{{ block.super }} dashboard{% endblock %}
+
+{% block content_title %} {% trans 'User Verification Record' %} {% endblock %}
+
+{% block breadcrumbs %}
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'admin:index' %}">{% trans 'Home' %}</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'verify_users' %}">{% trans 'Verify Users' %}</a></li>
+        <li class="breadcrumb-item">{% trans 'User Verification Record' %}</li>
+    </ol>
+{% endblock %}
+{% block content %}
+    {% get_side_menu using="app_list" as dashboard_list %}
+
+<div class="col-12">
+{% if records %}
+   <div class="card">
+      <div class="card-body table-responsive p-0">
+         <table id="result_list" class="table table-striped">
+            <thead>
+               <tr>
+                  <th class="" tabindex="0" rowspan="1" colspan="1">
+                     <div class="text">
+                        <span>Document Type</span>
+                     </div>
+                  </th>
+                  <th class="" tabindex="0" rowspan="1" colspan="1">
+                     <div class="text">
+                        <span>Created On</span>
+                     </div>
+                  </th>
+               </tr>
+            </thead>
+            <tbody>
+        
+            {% for record in records %}
+               <tr role="row" class="even">
+                  <th class="field-__str__"><a href="{% url 'verification_record' record.id %}">{{ record.type }}</a></th>
+                  <th class="field-__str__">{{ record.creation_date }}</th>
+               </tr>
+
+	    {% endfor %}
+	                {% else %}
+	                           <section id="content" class="content">
+   <div class="row">
+      <div class="col-12 pb-4" id="change-list-filters">
+         <form id="changelist-search" class="form-inline" method="GET">
+         </form>
+      </div>
+      <div class="col-12">
+         <div>
+            <form id="changelist-form" method="post" novalidate="">
+               <input type="hidden" name="csrfmiddlewaretoken" value="2IprOhawyhZBFfEAdXpKj5wxqi7rdhXtSPwfHwbBTUQn4xjNTmeYChwftvfaaEJO">
+               <div id="content-main">
+                  <div class="module" id="changelist">
+                     <div class="row">
+                        <div class="col-12">
+                           <div class="change-list-actions row pb-3">
+                              <div class="col-12">
+                              </div>
+                           </div>
+                        </div>
+                     </div>
+                     <div class="row">
+                        <div class="col-5">
+                           <div class="dataTables_info" role="status" aria-live="polite">
+                              0
+                              Verification Record
+                           </div>
+                        </div>
+                        <div class="col-7">
+                           <ul class="pagination pagination-sm m-0 float-right">
+                           </ul>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+            </form>
+         </div>
+         <br class="clear">
+      </div>
+   </div>
+</section>
+	                {% endif %}
+            </tbody>
+         </table>
+      </div>
+   </div>
+</div>
+{% endblock %}
+
+
