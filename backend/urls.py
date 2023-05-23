@@ -21,5 +21,6 @@ urlpatterns = [
     path('users/', include('users.urls')),
     path('tasks/', include('tasks.urls')),
     path('supports/', include('supports.urls')),
+    path('folder/', include('medical_folder.urls')),
     path('panel/', include('panel.urls')),
 ]

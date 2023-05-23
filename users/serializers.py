@@ -9,7 +9,7 @@ from django.contrib.auth import authenticate
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'email']
+        fields = ['id', 'email', 'first_name', 'last_name']
 
 class UserCreationSerializer(serializers.ModelSerializer): # There is a problem in this serializer
     cpassword = serializers.CharField(max_length=128)

@@ -1,8 +1,10 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
+
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.parsers import FormParser, MultiPartParser
+from django.http import HttpResponse
 
 from django.conf import settings
 
@@ -18,6 +20,28 @@ from .models import User, VerificationCode
 import random
 
 from django.core.mail import send_mail
+
+from .custom_renderers import JPEGRenderer
+
+
+
+from rest_framework import generics
+
+
+class ImageAPIView(generics.RetrieveAPIView):
+    renderers_classes = [JPEGRenderer]
+    def get(self, request, id):
+        queryset = User.objects.get(id=id).profile.picture
+        data = queryset
+        return HttpResponse(data, content_type='image/jpg')
+
+class Image2APIView(generics.RetrieveAPIView):
+    renderers_classes = [JPEGRenderer]
+    def get(self, request, id):
+        queryset = User.objects.get(id=id).profile.picture
+        data = queryset
+        return HttpResponse(data, content_type='image/png')
+
 
 class LoginView(APIView): # Not used 
     def post(self, request):
@@ -114,7 +138,86 @@ class ProfileView(APIView):
         data = serializer.validated_data.copy()
         data['user'] = data['user'].email
         return Response(data)
+    
+# I used this
+class MyProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+        user = request.user
+        user_data = UserSerializer(instance=user).data
+        profile_data = ProfileSerializer(instance=user.profile).data
+        profile_data.pop('id')
+        profile_data.pop('user')
+        data = dict(**(user_data), **(profile_data))
+        return Response(data=data)
+    
+class OtherProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request, id):
+        user = User.objects.filter(id=id).first()
+        user_data = UserSerializer(instance=user).data
+        profile_data = ProfileSerializer(instance=user.profile).data
+        profile_data.pop('id')
+        profile_data.pop('user')
+        data = dict(**(user_data), **(profile_data))
+        return Response(data=data)
+    
+# I used this 
+class CareAboutMeView(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+        users = request.user.profile.caregivers
+        users_data = UserSerializer(instance=users, many=True).data
+        return Response(data=users_data)
+    def post(self, request):
+        email = request.data.pop('email')
+        if email:
+            user = User.objects.filter(email=email).first()
+            if (user):
+                request.user.profile.caregivers.add(user)
+                users = request.user.profile.caregivers
+                users_data = UserSerializer(instance=users, many=True).data
+                return Response(data=users_data)
+            return Response({'error': 'Invalid Email'}, status=400)
 
+        return Response({'error': 'Please provide the Caregiver email'}, status=400)
+    def delete(self, request):
+        id = request.data.pop('id')
+        if id:
+            request.user.profile.caregivers.remove(id)
+            users = request.user.profile.caregivers
+            users_data = UserSerializer(instance=users, many=True).data
+            return Response(data=users_data)
+        
+
+# I used this
+class ICareAboutView(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+        users = request.user.care_about
+        users = [user.user for user in users.all()]
+        users_data = UserSerializer(instance=users, many=True).data
+        return Response(data=users_data)
+
+class DeclareAbsance(APIView):
+    permission_classes = [IsAuthenticated]
+    def post(self, request):
+        profile = request.user.profile
+        if not profile.is_absent:
+            profile.is_absent = True
+            profile.save()
+            return Response({'id': request.user.id, 'is_absent': True})
+        return Response({'error': 'You are already absent'}, status=401)
+    
+    def delete(self, request):
+        profile = request.user.profile
+        if profile.is_absent:
+            profile.is_absent = False
+            profile.save()
+            return Response({'id': request.user.id, 'is_absent': True})
+        return Response({'error': 'You are already present'}, status=401)
+
+    
 class ProfilePictureView(APIView):
     permission_classes = [IsAuthenticated]
     parser_classes = [FormParser, MultiPartParser]

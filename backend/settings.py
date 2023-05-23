@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'users',
     'tasks',
     'supports',
+    'medical_folder',
     'panel',
 ]
 

@@ -1,14 +1,16 @@
 from rest_framework.decorators import APIView
 from rest_framework.views import Response
-from .models import Demand, Task, Absance
-from .serializers import DemandSerializer, TaskSerializer, TaskDemandSerializer, AbsanceSerializer
+from .models import Demand, Task
+from .serializers import DemandSerializer, TaskSerializer, TaskDemandSerializer, DemandCoordsSerializer
 from users.authentication import JSONWebTokenAuthentication
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
-from users.permissions import IsPatient
+from users.permissions import IsPatient, IsDriver
+from users.models import User
+from users.serializers import UserSerializer
 
 class MyDemandView(APIView):
     authentication_classes = [JSONWebTokenAuthentication]
-    permission_classes = [IsAuthenticated, IsPatient]
+    permission_classes = [IsAuthenticated] # add worker + patients here
     def get(self, request):
         objects = Demand.objects.filter(state='A', user=request.user)
         serializer = DemandSerializer(objects, many=True)
@@ -26,7 +28,6 @@ class MyDemandView(APIView):
         id = request.data.get('id')
         if not id:
             return Response({'error': 'can\'t delete without id'})
-        
         instance = Demand.objects.filter(id=id).first()
         if not instance:
             return Response({'error': 'there are no element with such id'})
@@ -50,7 +51,7 @@ class MyDemandView(APIView):
         if not instance:
             return Response({'error': 'there are no element with such id'})
         if (instance.user.id == request.user.id):
-            if instance.state == 'A':
+            if instance.state in ('A', 'T'):
                 instance.state = 'F'
                 # here cancel the tasks too
                 instance.save()
@@ -60,151 +61,180 @@ class MyDemandView(APIView):
         else:
             return Response({'error': 'non authorized'})
         
-class ListMyCanceledDemandView(APIView):
+class MyDemandOldView(APIView):
     authentication_classes = [JSONWebTokenAuthentication]
-    permission_classes = [IsAuthenticated, IsPatient]
+    permission_classes = [IsAuthenticated] # add worker + patients here
     def get(self, request):
-        objects = Demand.objects.filter(state='C', user=request.user)
-        serializer = DemandSerializer(objects, many=True)
-        return Response(serializer.data)
-    
-class ListMyFinishedDemandView(APIView):
-    authentication_classes = [JSONWebTokenAuthentication]
-    permission_classes = [IsAuthenticated, IsPatient]
-    def get(self, request):
-        objects = Demand.objects.filter(state='F', user=request.user)
+        objects = Demand.objects.filter(user=request.user).exclude(state='A')
         serializer = DemandSerializer(objects, many=True)
         return Response(serializer.data)
 
-class ByDemandMyTasksView(APIView):
+class OtheresDemandView(APIView):
     authentication_classes = [JSONWebTokenAuthentication]
-    permission_classes = [IsAuthenticated, IsPatient]
+    permission_classes = [IsAuthenticated] # add worker + patients here
     def get(self, request):
-        objects = Task.objects.filter(state='A', demand=request.data['demand'])
-        serializer = TaskSerializer(objects, many=True)
+        objects = Demand.objects.filter(creator=request.user)
+        serializer = DemandSerializer(objects, many=True)
         return Response(serializer.data)
-    
+
     def post(self, request):
+        id = request.data.pop('id')
+        if not id:
+            return Response({'error': 'can\'t demand without id'}, status=401)
         data = request.data.copy()
-        data['to'] = request.user.id
-        serializer = TaskSerializer(data=data)
+        data['user'] = id
+        data['creator'] = request.user.id
+        serializer = DemandSerializer(data=data)
         if serializer.is_valid(raise_exception=True):
             instance = serializer.save()
-        return Response(TaskSerializer(instance).data)
+        return Response(DemandSerializer(instance).data)
     
-    def delete(self, request):
-        id = request.data.get('id')
-        if not id:
-            return Response({'error': 'can\'t delete without id'})
+
+## Don't look at this
+# class ListMyCanceledDemandView(APIView):
+#     authentication_classes = [JSONWebTokenAuthentication]
+#     permission_classes = [IsAuthenticated, IsPatient]
+#     def get(self, request):
+#         objects = Demand.objects.filter(state='C', user=request.user)
+#         serializer = DemandSerializer(objects, many=True)
+#         return Response(serializer.data)
+    
+# class ListMyFinishedDemandView(APIView):
+#     authentication_classes = [JSONWebTokenAuthentication]
+#     permission_classes = [IsAuthenticated, IsPatient]
+#     def get(self, request):
+#         objects = Demand.objects.filter(state='F', user=request.user)
+#         serializer = DemandSerializer(objects, many=True)
+#         return Response(serializer.data)
+
+# class ByDemandMyTasksView(APIView):
+#     authentication_classes = [JSONWebTokenAuthentication]
+#     permission_classes = [IsAuthenticated, IsPatient]
+#     def get(self, request):
+#         objects = Task.objects.filter(state='A', demand=request.data['demand'])
+#         serializer = TaskSerializer(objects, many=True)
+#         return Response(serializer.data)
+    
+#     def post(self, request):
+#         data = request.data.copy()
+#         data['to'] = request.user.id
+#         serializer = TaskSerializer(data=data)
+#         if serializer.is_valid(raise_exception=True):
+#             instance = serializer.save()
+#         return Response(TaskSerializer(instance).data)
+    
+#     def delete(self, request):
+#         id = request.data.get('id')
+#         if not id:
+#             return Response({'error': 'can\'t delete without id'})
         
-        instance = Task.objects.filter(id=id).first()
-        if not instance:
-            return Response({'error': 'there are no element with such id'})
-        if (instance.to.id == request.to.id):
-            if instance.state == 'A':
-                instance.state = 'C'
-                instance.save()
-                return Response({'id': id})
-            else:
-                return Response({'error': 'the task is already canceld or finished or may be tasked'}) 
-        else:
-            return Response({'error': 'non authorized'})
+#         instance = Task.objects.filter(id=id).first()
+#         if not instance:
+#             return Response({'error': 'there are no element with such id'})
+#         if (instance.to.id == request.to.id):
+#             if instance.state == 'A':
+#                 instance.state = 'C'
+#                 instance.save()
+#                 return Response({'id': id})
+#             else:
+#                 return Response({'error': 'the task is already canceld or finished or may be tasked'}) 
+#         else:
+#             return Response({'error': 'non authorized'})
         
 
-class ListByDemandMyFinishedTasksView(APIView):
-    authentication_classes = [JSONWebTokenAuthentication]
-    permission_classes = [IsAuthenticated, IsPatient]
-    def get(self, request):
-        objects = Task.objects.filter(state='F', demand=request.data['demand'], to=request.user)
-        serializer = TaskSerializer(objects, many=True)
-        return Response(serializer.data)
+# class ListByDemandMyFinishedTasksView(APIView):
+#     authentication_classes = [JSONWebTokenAuthentication]
+#     permission_classes = [IsAuthenticated, IsPatient]
+#     def get(self, request):
+#         objects = Task.objects.filter(state='F', demand=request.data['demand'], to=request.user)
+#         serializer = TaskSerializer(objects, many=True)
+#         return Response(serializer.data)
 
-class ListByDemandMyCanceledTasksView(APIView):
-    authentication_classes = [JSONWebTokenAuthentication]
-    permission_classes = [IsAuthenticated, IsPatient]
-    def get(self, request):
-        objects = Task.objects.filter(state='C', demand=request.data['demand'], to=request.user)
-        serializer = TaskSerializer(objects, many=True)
-        return Response(serializer.data)
+# class ListByDemandMyCanceledTasksView(APIView):
+#     authentication_classes = [JSONWebTokenAuthentication]
+#     permission_classes = [IsAuthenticated, IsPatient]
+#     def get(self, request):
+#         objects = Task.objects.filter(state='C', demand=request.data['demand'], to=request.user)
+#         serializer = TaskSerializer(objects, many=True)
+#         return Response(serializer.data)
 
-class ListByDemandMyTaskedTasksView(APIView):
-    authentication_classes = [JSONWebTokenAuthentication]
-    permission_classes = [IsAuthenticated, IsPatient]
-    def get(self, request):
-        objects = Task.objects.filter(state='T', demand=request.data['demand'], to=request.user)
-        serializer = TaskSerializer(objects, many=True)
-        return Response(serializer.data)
+# class ListByDemandMyTaskedTasksView(APIView):
+#     authentication_classes = [JSONWebTokenAuthentication]
+#     permission_classes = [IsAuthenticated, IsPatient]
+#     def get(self, request):
+#         objects = Task.objects.filter(state='T', demand=request.data['demand'], to=request.user)
+#         serializer = TaskSerializer(objects, many=True)
+#         return Response(serializer.data)
     
-class ListMyActiveTasksView(APIView):
-    authentication_classes = [JSONWebTokenAuthentication]
-    permission_classes = [IsAuthenticated, IsPatient]
-    def get(self, request):
-        objects = Task.objects.filter(state='A', to=request.user)
-        serializer = TaskSerializer(objects, many=True)
-        return Response(serializer.data)
+# class ListMyActiveTasksView(APIView):
+#     authentication_classes = [JSONWebTokenAuthentication]
+#     permission_classes = [IsAuthenticated, IsPatient]
+#     def get(self, request):
+#         objects = Task.objects.filter(state='A', to=request.user)
+#         serializer = TaskSerializer(objects, many=True)
+#         return Response(serializer.data)
 
-class ListMyFinishedTasksView(APIView):
-    authentication_classes = [JSONWebTokenAuthentication]
-    permission_classes = [IsAuthenticated, IsPatient]
-    def get(self, request):
-        objects = Task.objects.filter(state='F', to=request.user)
-        serializer = TaskSerializer(objects, many=True)
-        return Response(serializer.data)
+# class ListMyFinishedTasksView(APIView):
+#     authentication_classes = [JSONWebTokenAuthentication]
+#     permission_classes = [IsAuthenticated, IsPatient]
+#     def get(self, request):
+#         objects = Task.objects.filter(state='F', to=request.user)
+#         serializer = TaskSerializer(objects, many=True)
+#         return Response(serializer.data)
 
-class ListMyCanceledTasksView(APIView):
-    authentication_classes = [JSONWebTokenAuthentication]
-    permission_classes = [IsAuthenticated, IsPatient]
-    def get(self, request):
-        objects = Task.objects.filter(state='C', to=request.user)
-        serializer = TaskSerializer(objects, many=True)
-        return Response(serializer.data)
-
-class ListMyTaskedTasksView(APIView):
-    authentication_classes = [JSONWebTokenAuthentication]
-    permission_classes = [IsAuthenticated, IsPatient]
-    def get(self, request):
-        objects = Task.objects.filter(state='T', to=request.user)
-        serializer = TaskSerializer(objects, many=True)
-        return Response(serializer.data)
+# class ListMyCanceledTasksView(APIView):
+#     authentication_classes = [JSONWebTokenAuthentication]
+#     permission_classes = [IsAuthenticated, IsPatient]
+#     def get(self, request):
+#         objects = Task.objects.filter(state='C', to=request.user)
+#         serializer = TaskSerializer(objects, many=True)
+#         return Response(serializer.data)
     
-class ByMeTasksView(APIView):
-    authentication_classes = [JSONWebTokenAuthentication]
-    permission_classes = [IsAuthenticated, IsPatient]
-    def get(self, request):
-        objects = Task.objects.filter(state='A', to=request.user)
-        serializer = TaskSerializer(objects, many=True)
-        return Response(serializer.data)
+# ## until here
+
+# class ListMyTaskedTasksView(APIView):
+#     authentication_classes = [JSONWebTokenAuthentication]
+#     permission_classes = [IsAuthenticated, IsPatient]
+#     def get(self, request):
+#         objects = Task.objects.filter(state='T', to=request.user)
+#         serializer = TaskSerializer(objects, many=True)
+#         return Response(serializer.data)
     
-    def delete(self, request):
-        id = request.data.get('id')
-        if not id:
-            return Response({'error': 'can\'t delete without id'})
+# class ByMeTasksView(APIView):
+#     authentication_classes = [JSONWebTokenAuthentication]
+#     permission_classes = [IsAuthenticated, IsPatient]
+#     def get(self, request):
+#         objects = Task.objects.filter(state='A', to=request.user)
+#         serializer = TaskSerializer(objects, many=True)
+#         return Response(serializer.data)
+    
+#     def delete(self, request):
+#         id = request.data.get('id')
+#         if not id:
+#             return Response({'error': 'can\'t delete without id'})
         
-        instance = Task.objects.filter(id=id).first()
-        if not instance:
-            return Response({'error': 'there are no element with such id'})
-        if (instance.to.id == request.to.id):
-            if instance.state == 'A':
-                instance.state = 'C'
-                instance.save()
-                return Response({'id': id})
-            else:
-                return Response({'error': 'the task is already canceld or finished or may be tasked'}) 
-        else:
-            return Response({'error': 'non authorized'})
+#         instance = Task.objects.filter(id=id).first()
+#         if not instance:
+#             return Response({'error': 'there are no element with such id'})
+#         if (instance.to.id == request.to.id):
+#             if instance.state == 'A':
+#                 instance.state = 'C'
+#                 instance.save()
+#                 return Response({'id': id})
+#             else:
+#                 return Response({'error': 'the task is already canceld or finished or may be tasked'}) 
+#         else:
+#             return Response({'error': 'non authorized'})
 
 
 class MyTaskView(APIView):
     authentication_classes = [JSONWebTokenAuthentication]
     permission_classes = [IsAuthenticated]
     def get(self, request):
-        state = request.data.get('state')
-        if state in [state[0] for state in Task.states]:
-            objects = Task.objects.filter(state=state, user=request.user)
-        else:
-            objects = Task.objects.filter(user=request.user)
-        serializer = TaskSerializer(objects, many=True)
-        return Response(serializer.data)
+            tasks = Task.objects.filter(user=request.user, state='A')
+            serializer = TaskSerializer(instance=tasks, many=True)
+            data = [dict(**(TaskSerializer(task).data), longitude=task.demand.longitude, latitude=task.demand.latitude, patient=task.demand.user.id)for task in tasks]
+            return Response(data)
     
     def post(self, request):
         data = request.data.dict()
@@ -259,56 +289,93 @@ class MyTaskView(APIView):
         else:
             return Response({'error': 'non authorized'})
         
-
-class MyAbsanceView(APIView):
+class MyTaskOldView(APIView):
     authentication_classes = [JSONWebTokenAuthentication]
     permission_classes = [IsAuthenticated]
     def get(self, request):
-        objects = Absance.objects.filter(user=request.user)
-        serializer = AbsanceSerializer(objects, many=True)
-        return Response(serializer.data)
+            tasks = Task.objects.filter(user=request.user).exclude(state='A')
+            serializer = TaskSerializer(instance=tasks, many=True)
+            data = [dict(**(TaskSerializer(task).data), longitude=task.demand.longitude, latitude=task.demand.latitude, patient=task.demand.user.id)for task in tasks]
+            return Response(data)
 
-    def post(self, request):
-        data = request.data.dict()
-        data['user'] = request.user.id
-        serializer = AbsanceSerializer(data=data)
-        if serializer.is_valid():
-            instance = serializer.save()
-            return Response(AbsanceSerializer(instance).data)
-        return Response({'error': 'just for testing'})
+# class MyAbsanceView(APIView):
+#     authentication_classes = [JSONWebTokenAuthentication]
+#     permission_classes = [IsAuthenticated]
+#     def get(self, request):
+#         objects = Absance.objects.filter(user=request.user)
+#         serializer = AbsanceSerializer(objects, many=True)
+#         return Response(serializer.data)
 
-    def delete(self, request):
-        id = request.data.get('id')
-        if not id:
-            return Response({'error': 'can\'t delete without id'})
+#     def post(self, request):
+#         data = request.data.dict()
+#         data['user'] = request.user.id
+#         serializer = AbsanceSerializer(data=data)
+#         if serializer.is_valid():
+#             instance = serializer.save()
+#             return Response(AbsanceSerializer(instance).data)
+#         return Response({'error': 'just for testing'})
+
+#     def delete(self, request):
+#         id = request.data.get('id')
+#         if not id:
+#             return Response({'error': 'can\'t delete without id'})
         
-        instance = Absance.objects.filter(id=id).first()
-        if not instance:
-            return Response({'error': 'there are no element with such id'})
-        if (instance.user.id == request.user.id):
-            if instance.state == 'A':
-                instance.state = 'C'
-                instance.save()
-                return Response({'canceled_absance': id})
-            else:
-                return Response({'error': 'the absance is already canceld'}) 
-        else:
-            return Response({'error': 'non authorized'})
+#         instance = Absance.objects.filter(id=id).first()
+#         if not instance:
+#             return Response({'error': 'there are no element with such id'})
+#         if (instance.user.id == request.user.id):
+#             if instance.state == 'A':
+#                 instance.state = 'C'
+#                 instance.save()
+#                 return Response({'canceled_absance': id})
+#             else:
+#                 return Response({'error': 'the absance is already canceld'}) 
+#         else:
+#             return Response({'error': 'non authorized'})
     
-    def put(self, request):
-        id = request.data.get('id')
-        if not id:
-            return Response({'error': 'can\'t delete without id'})
+#     def put(self, request):
+#         id = request.data.get('id')
+#         if not id:
+#             return Response({'error': 'can\'t delete without id'})
         
-        instance = Absance.objects.filter(id=id).first()
-        if not instance:
-            return Response({'error': 'there are no element with such id'})
-        if (instance.user.id == request.user.id):
-            if instance.state == 'C':
-                instance.state = 'A'
-                instance.save()
-                return Response({'activated_absance': id})
-            else:
-                return Response({'error': 'the absance is already active'}) 
-        else:
-            return Response({'error': 'non authorized'})
+#         instance = Absance.objects.filter(id=id).first()
+#         if not instance:
+#             return Response({'error': 'there are no element with such id'})
+#         if (instance.user.id == request.user.id):
+#             if instance.state == 'C':
+#                 instance.state = 'A'
+#                 instance.save()
+#                 return Response({'activated_absance': id})
+#             else:
+#                 return Response({'error': 'the absance is already active'}) 
+#         else:
+#             return Response({'error': 'non authorized'})
+
+
+class MyTeamMembersView(APIView):
+    permission_classes = [IsAuthenticated, IsDriver]
+    def get(self, request):
+        team = request.user.team_set.first()
+        if team:
+            users = set()
+            for tasks in team.task_set.all():
+                users.add(tasks.user)
+            serializer = UserSerializer(instance=users, many=True)
+            print(serializer.data)
+            return Response(data=serializer.data, status=200)
+        # users_data = UserSerializer(instance=users, many=True).data
+        return Response(data={'error':'This user has no team.'}, status=400)
+    
+class MyTeamDirection(APIView):
+    permission_classes = [IsAuthenticated, IsDriver]
+    def get(self, request):
+        team = request.user.team_set.first()
+        if team:
+            coords = []
+            for task in team.task_set.all().order_by('order'):
+                coords.append(task.demand)
+            serializer = DemandCoordsSerializer(instance=coords, many=True)
+            print(serializer.data)
+            return Response(data=serializer.data, status=200)
+        # users_data = UserSerializer(instance=users, many=True).data
+        return Response(data={'error':'This user has no team.'}, status=400)

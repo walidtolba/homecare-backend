@@ -17,27 +17,21 @@ class User(AbstractUser):
 class Profile(models.Model):
     genders = (('F', 'Female'), ('M', 'Male'))
     bloodTypes = (('A+', 'A+'), ('B+', 'B+'), ('AB+', 'AB+'), ('O+', 'O+'), ('A-', 'A-'), ('B-', 'B-'), ('AB-', 'AB-'), ('O-', 'O-'))
-    civilStatus = (('S', 'Single'), ('M', 'Married'), ('W', 'Widowed'), ('D', 'Divorced'))
-    titles = [('M', 'Medic'), ('N', 'Nurse'), ('D', 'Driver'), ('F', 'Pharmasist'), ('P', 'Patient')]
+    types = [('Medic', 'Medic'), ('Nurse', 'Nurse'), ('Driver', 'Driver'), ('Patient', 'Patient')]
     def get_upload_to(self, filename):
         return os.path.join('images', 'profile_pictures', str(self.pk), filename)
-    title = models.CharField(max_length=1, choices=titles)
-    birthDate = models.DateField()
+    type = models.CharField(max_length=16, choices=types)
+    title = models.CharField(max_length=64, null=True, blank=True)
+    birth_date = models.DateField()
     gender = models.CharField(max_length=1, choices=genders)
-    bloodType = models.CharField(max_length=3, choices=bloodTypes)
-    willaia = models.CharField(max_length=64)
-    daira = models.CharField(max_length=64)
-    baladia = models.CharField(max_length=64)
-    street = models.CharField(max_length=64)
-    home = models.CharField(max_length=64)
-    job = models.CharField(max_length=128, null=True, blank=True)
-    isOnline = models.BooleanField(default=False)
-    isVerified = models.BooleanField(default=False)
-    picture = models.ImageField(upload_to=get_upload_to, null=True, blank=True)
-    civilStatus = models.CharField(max_length=1, choices=civilStatus)
-    bio = models.TextField(blank=True, default='')
-    isPublic = models.BooleanField(default=True)
+    blood_type = models.CharField(max_length=3, choices=bloodTypes)
+    latitude = models.FloatField()
+    longitude = models.FloatField()
+    is_verified = models.BooleanField(default=False)
+    is_absent = models.BooleanField(default=False)
+    picture = models.ImageField(upload_to=get_upload_to, null=True, blank=True, default='images/profile_pictures/default_profile_picture.jpg')
     user = models.OneToOneField(User, on_delete=models.CASCADE)
+    caregivers = models.ManyToManyField(User, null=True, blank=True, related_name='care_about')
     def __str__(self):
         return self.user.email
 

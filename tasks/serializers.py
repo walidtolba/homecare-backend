@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Demand, Task, Absance
+from .models import Demand, Task
 from rest_framework.exceptions import ValidationError
 
 class DemandSerializer(serializers.ModelSerializer):
@@ -22,12 +22,8 @@ class TaskDemandSerializer(serializers.ModelSerializer):
             raise ValidationError('Demand must be active')
         return demand
 
-class AbsanceSerializer(serializers.ModelSerializer):
+
+class DemandCoordsSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Absance
-        fields = '__all__'
-    
-    def validate(self, attrs):
-        if attrs['firstDate'] > attrs['lastDate']:
-            raise ValidationError('first date must come before last date')
-        return super().validate(attrs)
+        model = Demand
+        fields = ['longitude', 'latitude']
