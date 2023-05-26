@@ -21,7 +21,7 @@ class Demand(models.Model):
 class Team(models.Model):
 
     turn = models.IntegerField(default=0)
-    driver = models.ForeignKey(User, on_delete=models.CASCADE)
+    driver = models.OneToOneField(User, on_delete=models.CASCADE)
     
     def __str__(self):
         return str(self.id)
@@ -34,11 +34,11 @@ class Task(models.Model):
     state = models.CharField(max_length=1, choices=states, default='A')
     creation_date = models.DateTimeField(auto_now_add=True)
     demand = models.ForeignKey(Demand, on_delete=models.CASCADE)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
     team = models.ForeignKey(Team, on_delete=models.CASCADE)
 
 
     def __str__(self):
-        return f'task id {self.id} for demand id {self.demand.id} by {self.user.email}'
+        return f'task id {self.id} for demand id {self.demand.id}'
 
 

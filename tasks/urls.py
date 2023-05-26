@@ -8,8 +8,5 @@ urlpatterns = [
     path('my_tasks/', views.MyTaskView.as_view()),
     path('my_old_tasks/', views.MyTaskOldView.as_view()),
     path('my_team_members/', views.MyTeamMembersView.as_view()),
-    path('my_team_directions/', views.MyTeamDirection.as_view())
-    # path('my_canceled_demands/', views.ListMyCanceledDemandView.as_view()),
-    # path('my_finished_demands/', views.ListMyFinishedDemandView.as_view()),
-    # path('tasks/', views.MyTaskView.as_view()),
+    path('my_team_directions/', views.MyTeamDirection.as_view()),
 ]

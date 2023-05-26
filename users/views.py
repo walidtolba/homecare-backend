@@ -1,30 +1,18 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
-
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.parsers import FormParser, MultiPartParser
 from django.http import HttpResponse
-
 from django.conf import settings
-
 from rest_framework import parsers, renderers, status
 from .serializers import AuthTokenSerializer
-
-from .serializers import UserSerializer, UserCreationSerializer, VerificationCodeSerializer, ProfileSerializer, ProfilePictureSerializer, UserVerificationRecordSerializer
-
+from .serializers import UserSerializer, UserCreationSerializer, ProfileSerializer, ProfilePictureSerializer, UserVerificationRecordSerializer
 import jwt, datetime
-
 from .models import User, VerificationCode
-
 import random
-
 from django.core.mail import send_mail
-
 from .custom_renderers import JPEGRenderer
-
-
-
 from rest_framework import generics
 
 
@@ -41,40 +29,6 @@ class Image2APIView(generics.RetrieveAPIView):
         queryset = User.objects.get(id=id).profile.picture
         data = queryset
         return HttpResponse(data, content_type='image/png')
-
-
-class LoginView(APIView): # Not used 
-    def post(self, request):
-        email = request.data['email']
-        password = request.data['password']
-        user = User.objects.filter(email=email).first()
-        if not user:
-            raise AuthenticationFailed('User not found')
-        if not user.check_password(password):
-            raise AuthenticationFailed('Password incorrect')
-        
-        payload = {
-            'id': user.id,
-            'exp': datetime.datetime.utcnow() + datetime.timedelta(minutes=60),
-            'iat': datetime.datetime.utcnow()
-        }
-        token = jwt.encode(payload, 'manel-helal', algorithm='HS256').encode('utf-8')
-
-        return Response({'token': token})
-    
-    def get(self, request):
-        token = request.headers.get('Authorization')
-        if not token:
-            raise AuthenticationFailed('Unauthenticated')
-        try:
-            payload = jwt.decode(token, settings.SECRET_KEY, algorithms='HS256')
-        except jwt.ExpiredSignatureError:
-            raise AuthenticationFailed('Unauthenticated')
-        
-        user = User.objects.get(id=payload['id'])
-        serializer = UserSerializer(user)
-        return Response(serializer.data)
-
 
 class JSONWebTokenAuth(APIView):
     throttle_classes = ()
