@@ -5,6 +5,10 @@ from rest_framework.permissions import IsAuthenticated
 from users.permissions import IsPatient, IsMedic
 from users.authentication import JSONWebTokenAuthentication
 from users.models import User
+from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework import generics
+from django.http import HttpResponse
+from users.custom_renderers import ImageRenderer
 
 
 class MyRecords(APIView):
@@ -83,3 +87,27 @@ class OthersReportsCreate(APIView):
             serializer.save()
             return Response(data=serializer.data, status=200)
         return Response({'error': 'Invalid Date'}, status=401)
+
+class CreateRecordView(APIView):
+    permission_classes = [IsAuthenticated]
+    parser_classes = [FormParser, MultiPartParser]
+    
+    def post(self, request):
+        data = dict(request.data)
+        data['title'] = data['title'][0]
+        data['image'] = data['image'][0]
+        data['user'] = request.user.id
+        print(data)
+        serializer = RecordSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(data=serializer.data, status=200)
+        print(serializer.errors)
+        return Response(data=serializer.errors, status=500)
+    
+class RecordImageView(generics.RetrieveAPIView):
+    renderers_classes = [ImageRenderer]
+    def get(self, request, id):
+        queryset = MedicalRecord.objects.get(id=id).image
+        data = queryset
+        return HttpResponse(data, content_type='image/' + data.path.split(".")[-1])

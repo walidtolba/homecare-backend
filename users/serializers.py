@@ -36,6 +36,13 @@ class UserCreationSerializer(serializers.ModelSerializer): # There is a problem 
         instance.save()
         return instance
 
+    def update(self, instance, validated_data):
+        password = validated_data.pop('password', None)
+        cpassword = validated_data.pop('cpassword', None)
+        instance.set_password(password)
+        instance.save()
+        return instance
+    
 class AuthTokenSerializer(serializers.Serializer):
     email = serializers.EmailField(
         label=_("Email"),
@@ -105,15 +112,18 @@ class ProfilePictureSerializer(serializers.ModelSerializer):
 
 class UserVerificationRecordSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Profile
-        fields = ['picture']
+        model = UserVerificationRecord
+        fields = '__all__'
     
     def create(self, validated_data):
         instance = UserVerificationRecord()
         instance.type = validated_data.get('type')
         instance.user = validated_data.get('user')
+        print('yes id did work')
+
         if not validated_data.get('image'):
             pass #raise error here
         instance.image = validated_data.get('image')
         instance.save()
+        print('yes id did work')
         return instance

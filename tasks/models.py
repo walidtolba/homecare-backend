@@ -20,8 +20,16 @@ class Demand(models.Model):
     
 class Team(models.Model):
 
-    turn = models.IntegerField(default=0)
     driver = models.OneToOneField(User, on_delete=models.CASCADE)
+    def turn(self):
+        tasks = self.task_set.filter(state='A')
+        if tasks:
+            order = tasks.first().order
+            for task in tasks:
+                if task.order < order:
+                    order = task.order
+            return order
+        return 0
     
     def __str__(self):
         return str(self.id)

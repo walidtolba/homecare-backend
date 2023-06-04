@@ -5,7 +5,8 @@ from .serializers import DemandSerializer, TaskSerializer, TaskDemandSerializer,
 from users.authentication import JSONWebTokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 from users.permissions import IsDriver
-from users.serializers import UserSerializer
+from users.serializers import ProfileSerializer, UserSerializer
+from users.models import User
 
 class MyDemandView(APIView):
     authentication_classes = [JSONWebTokenAuthentication]
@@ -13,6 +14,11 @@ class MyDemandView(APIView):
     def get(self, request):
         objects = Demand.objects.filter(state='A', user=request.user)
         serializer = DemandSerializer(objects, many=True)
+        for demand in serializer.data:
+            if demand['creator'] != None:
+                creator = User.objects.filter(id=demand['creator']).first()
+                demand['creator'] = f'{creator.email}'
+            demand['user'] = User.objects.filter(id=demand['user']).first().email
         return Response(serializer.data)
     
     def post(self, request):
@@ -41,24 +47,24 @@ class MyDemandView(APIView):
         else:
             return Response({'error': 'non authorized'})
         
-    def put(self, request):
-        id = request.data.get('id')
-        if not id:
-            return Response({'error': 'can\'t finish without id'})
+    # def put(self, request):
+    #     id = request.data.get('id')
+    #     if not id:
+    #         return Response({'error': 'can\'t finish without id'})
         
-        instance = Demand.objects.filter(id=id).first()
-        if not instance:
-            return Response({'error': 'there are no element with such id'})
-        if (instance.user.id == request.user.id):
-            if instance.state in ('A', 'T'):
-                instance.state = 'F'
-                # here cancel the tasks too
-                instance.save()
-                return Response({'id': id})
-            else:
-                return Response({'error': 'the demand is already canceld or finished'}) 
-        else:
-            return Response({'error': 'non authorized'})
+    #     instance = Demand.objects.filter(id=id).first()
+    #     if not instance:
+    #         return Response({'error': 'there are no element with such id'})
+    #     if (instance.user.id == request.user.id):
+    #         if instance.state in ('A', 'T'):
+    #             instance.state = 'F'
+    #             # here cancel the tasks too
+    #             instance.save()
+    #             return Response({'id': id})
+    #         else:
+    #             return Response({'error': 'the demand is already canceld or finished'}) 
+    #     else:
+    #         return Response({'error': 'non authorized'})
         
 class MyDemandOldView(APIView):
     authentication_classes = [JSONWebTokenAuthentication]
@@ -66,6 +72,11 @@ class MyDemandOldView(APIView):
     def get(self, request):
         objects = Demand.objects.filter(user=request.user).exclude(state='A')
         serializer = DemandSerializer(objects, many=True)
+        for demand in serializer.data:
+            if demand['creator'] != None:
+                creator = User.objects.filter(id=demand['creator']).first()
+                demand['creator'] = f'{creator.email}'
+            demand['user'] = User.objects.filter(id=demand['user']).first().email
         return Response(serializer.data)
 
 class OtheresDemandView(APIView):
@@ -74,6 +85,11 @@ class OtheresDemandView(APIView):
     def get(self, request):
         objects = Demand.objects.filter(creator=request.user)
         serializer = DemandSerializer(objects, many=True)
+        for demand in serializer.data:
+            if demand['creator'] != None:
+                creator = User.objects.filter(id=demand['creator']).first()
+                demand['creator'] = f'{creator.email}'
+            demand['user'] = User.objects.filter(id=demand['user']).first().email
         return Response(serializer.data)
 
     def post(self, request):
@@ -94,7 +110,7 @@ class MyTaskView(APIView):
     def get(self, request):
             tasks = Task.objects.filter(user=request.user, state='A')
             serializer = TaskSerializer(instance=tasks, many=True)
-            data = [dict(**(TaskSerializer(task).data), longitude=task.demand.longitude, latitude=task.demand.latitude, patient=task.demand.user.id)for task in tasks]
+            data = [dict(**(TaskSerializer(task).data), longitude=task.demand.longitude, latitude=task.demand.latitude, patient=task.demand.user.id, patient_name=f'{task.demand.user.first_name} {task.demand.user.last_name}')for task in tasks]
             return Response(data)
     
     def post(self, request):
@@ -149,33 +165,49 @@ class MyTaskView(APIView):
                 return Response({'error': 'can\' finish task'}) 
         else:
             return Response({'error': 'non authorized'})
-        
+    
 class MyTaskOldView(APIView):
     authentication_classes = [JSONWebTokenAuthentication]
     permission_classes = [IsAuthenticated]
     def get(self, request):
             tasks = Task.objects.filter(user=request.user).exclude(state='A')
             serializer = TaskSerializer(instance=tasks, many=True)
-            data = [dict(**(TaskSerializer(task).data), longitude=task.demand.longitude, latitude=task.demand.latitude, patient=task.demand.user.id)for task in tasks]
+            data = [dict(**(TaskSerializer(task).data), longitude=task.demand.longitude, latitude=task.demand.latitude, patient=task.demand.user.id, patient_name=f'{task.demand.user.first_name} {task.demand.user.last_name}')for task in tasks]
+            return Response(data)
+
+class OnMeTaskView(APIView):
+    authentication_classes = [JSONWebTokenAuthentication]
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+            tasks = Task.objects.filter(demand__user=request.user, state='A')
+            serializer = TaskSerializer(instance=tasks, many=True)
+            data = [dict(**(TaskSerializer(task).data), longitude=task.demand.longitude, latitude=task.demand.latitude, patient=task.user.id, patient_name=f'{task.user.first_name} {task.user.last_name}', turn=task.team.turn())for task in tasks]
+            print(data)
             return Response(data)
 
 class MyTeamMembersView(APIView):
     permission_classes = [IsAuthenticated, IsDriver]
     def get(self, request):
-        team = request.user.team_set.first()
+        team = request.user.team
         if team:
             users = set()
             for tasks in team.task_set.all():
-                users.add(tasks.user)
-            serializer = UserSerializer(instance=users, many=True)
-            print(serializer.data)
-            return Response(data=serializer.data, status=200)
+                if tasks.user:
+                    users.add(tasks.user)
+            data = []
+            for user in users:
+                user_data = UserSerializer(instance=user).data
+                profile_data = ProfileSerializer(instance=user.profile).data
+                profile_data.pop('id')
+                profile_data.pop('user')
+                data.append(dict(**(user_data), **(profile_data)))
+            return Response(data=data, status=200)
         return Response(data={'error':'This user has no team.'}, status=400)
     
 class MyTeamDirection(APIView):
     permission_classes = [IsAuthenticated, IsDriver]
     def get(self, request):
-        team = request.user.team_set.first()
+        team = request.user.team
         if team:
             coords = []
             for task in team.task_set.all().order_by('order'):
@@ -184,3 +216,11 @@ class MyTeamDirection(APIView):
             print(serializer.data)
             return Response(data=serializer.data, status=200)
         return Response(data={'error':'This user has no team.'}, status=400)
+
+class MyTeamInfoView(APIView):
+    authentication_classes = [JSONWebTokenAuthentication]
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+            user = request.user
+            if user.profile.type == 'Driver':
+                pass

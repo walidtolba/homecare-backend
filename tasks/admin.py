@@ -158,9 +158,9 @@ class DemandAdmin(admin.ModelAdmin):
                             j = i[1]
                             if i[1] != 0:
                                 task = Task(order=counter, team=team, demand=demands[j-1])
-                                demand[j-1].state = 'T'
+                                demands[j-1].state = 'T'
                                 task.save()
-                                demand[j-1].save()
+                                demands[j-1].save()
                                 counter += 1
                             print('->', points[j], end=' ')
                             break
@@ -183,7 +183,8 @@ class DemandAdmin(admin.ModelAdmin):
 
 @admin.register(Task)
 class TaskAdmin(admin.ModelAdmin):
-    readonly_fields = ['order', 'state', 'creation_date', 'demand', 'user', 'team']
+    pass
+    # readonly_fields = ['order', 'state', 'creation_date', 'demand', 'user', 'team']
 @admin.register(Team)
 class TeamAdmin(admin.ModelAdmin):
     readonly_fields = ['turn', 'driver']

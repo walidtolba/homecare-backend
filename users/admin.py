@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import User, Profile, VerificationCode
+from .models import User, Profile, VerificationCode, UserVerificationRecord
 
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
@@ -11,3 +11,5 @@ class ProfileAdmin(admin.ModelAdmin):
     pass
     # def has_change_permission(self, request, obj=None):
     #     return False
+
+admin.site.register(UserVerificationRecord)

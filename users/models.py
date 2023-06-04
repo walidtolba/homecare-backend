@@ -17,7 +17,7 @@ class User(AbstractUser):
 class Profile(models.Model):
     genders = (('F', 'Female'), ('M', 'Male'))
     bloodTypes = (('A+', 'A+'), ('B+', 'B+'), ('AB+', 'AB+'), ('O+', 'O+'), ('A-', 'A-'), ('B-', 'B-'), ('AB-', 'AB-'), ('O-', 'O-'))
-    types = [('Medic', 'Medic'), ('Nurse', 'Nurse'), ('Driver', 'Driver'), ('Patient', 'Patient')]
+    types = [('Medic', 'Medic'), ('Nurse', 'Nurse'), ('Driver', 'Driver'), ('Patient', 'Patient'), ('Support', 'Support')]
     def get_upload_to(self, filename):
         return os.path.join('images', 'profile_pictures', str(self.pk), filename)
     type = models.CharField(max_length=16, choices=types)
@@ -25,11 +25,11 @@ class Profile(models.Model):
     birth_date = models.DateField()
     gender = models.CharField(max_length=1, choices=genders)
     blood_type = models.CharField(max_length=3, choices=bloodTypes)
-    latitude = models.FloatField()
-    longitude = models.FloatField()
+    latitude = models.FloatField(null=True)
+    longitude = models.FloatField(null=True)
     is_verified = models.BooleanField(default=False)
     is_absent = models.BooleanField(default=False)
-    picture = models.ImageField(upload_to=get_upload_to, null=True, blank=True, default='images/profile_pictures/default_profile_picture.jpg')
+    picture = models.ImageField(upload_to=get_upload_to, default='images/profile_pictures/default_profile_picture.jpg')
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     caregivers = models.ManyToManyField(User, null=True, blank=True, related_name='care_about')
     def __str__(self):
